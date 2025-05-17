@@ -5,7 +5,6 @@ import LoginForm from './components/LoginForm';
 import Dashboard from './components/Dashboard';
 import './App.css';
 
-
 function App() {
   return (
     <BrowserRouter>
