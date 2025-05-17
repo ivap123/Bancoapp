@@ -1,27 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import FormRegister from './components/FormRegister';
 import LoginForm from './components/LoginForm';
+import Dashboard from './components/Dashboard';
 import './App.css';
 
 function App() {
-  const [view, setView] = useState('login'); // o 'register'
-
   return (
-    <div>
-      <h1>Prueba de Firestore</h1>
-
-      <div className="mb-3">
-        <button onClick={() => setView('login')} className="btn btn-primary me-2">
-          Ver Login
-        </button>
-        <button onClick={() => setView('register')} className="btn btn-secondary">
-          Ver Registro
-        </button>
-      </div>
-
-      {view === 'login' && <LoginForm />}
-      {view === 'register' && <FormRegister />}
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LoginForm />} />
+        <Route path="/register" element={<FormRegister />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
