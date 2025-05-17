@@ -1,11 +1,21 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import FormRegister from './components/FormRegister';
+import LoginForm from './components/LoginForm';
+import Dashboard from './components/Dashboard';
 import './App.css';
 
 
 function App() {
   return (
-    <div style={{ textAlign: "center", marginTop: "3rem" }}>
-      <h1>Bienvenido a tu app bancaria 🏦</h1>      <p>Esta es la base, ¡ya puedes empezar a trabajar!</p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LoginForm />} />
+        <Route path="/register" element={<FormRegister />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
