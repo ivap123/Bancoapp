@@ -1,23 +1,26 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import FormRegister from './components/FormRegister';
+import LoginForm from './components/LoginForm';
 import './App.css';
 
 function App() {
+  const [view, setView] = useState('login'); // o 'register'
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <h1>Prueba de Firestore</h1>
+
+      <div className="mb-3">
+        <button onClick={() => setView('login')} className="btn btn-primary me-2">
+          Ver Login
+        </button>
+        <button onClick={() => setView('register')} className="btn btn-secondary">
+          Ver Registro
+        </button>
+      </div>
+
+      {view === 'login' && <LoginForm />}
+      {view === 'register' && <FormRegister />}
     </div>
   );
 }
