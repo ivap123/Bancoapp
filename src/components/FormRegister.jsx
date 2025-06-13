@@ -3,6 +3,7 @@ import { db, auth } from '../firebase/config';
 import { collection, addDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { doc, setDoc } from 'firebase/firestore';
 
 const FormRegister = () => {
   const navigate = useNavigate();
@@ -15,13 +16,14 @@ const FormRegister = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      await addDoc(collection(db, 'usuarios'), {
+      await setDoc(doc(db, 'usuarios', user.uid), {
         uid: user.uid,
         nombre: data.nombre,
         apellido: data.apellido,
         email: data.email,
         rut: data.rut,
         fecha: data.fecha,
+        saldo: 1000000,
         creado: new Date().toISOString(),
       });
 
@@ -41,19 +43,16 @@ const FormRegister = () => {
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #6f42c1 0%, #4a1f7f 35%, #2d1155 65%, #1a1a1a 100%)',
         padding: '0',
-      }}
-    >
+      }}>
       <div
         className="row justify-content-center align-items-center"
-        style={{ minHeight: '100vh', margin: '0' }}
-      >
+        style={{ minHeight: '100vh', margin: '0' }}>
         <div className="col-md-8 col-lg-6">
           {/* Logo y nombre del banco */}
           <div className="text-center mb-4">
             <h1
               className="text-white fw-bold"
-              style={{ fontSize: '2.5rem', textShadow: '0 0 10px rgba(111, 66, 193, 0.7)' }}
-            >
+              style={{ fontSize: '2.5rem', textShadow: '0 0 10px rgba(111, 66, 193, 0.7)' }}>
               <span style={{ color: '#a17fe0' }}>Banco</span>Digital
             </h1>
             <p className="text-light" style={{ fontSize: '1.1rem', letterSpacing: '1px' }}>
@@ -68,16 +67,14 @@ const FormRegister = () => {
               borderRadius: '15px',
               backdropFilter: 'blur(10px)',
               boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(111, 66, 193, 0.3)',
-            }}
-          >
+            }}>
             <div
               className="card-header text-white text-center py-3"
               style={{
                 borderBottom: '2px solid #a17fe0',
                 borderRadius: '15px 15px 0 0',
                 background: 'linear-gradient(90deg, #4a1f7f, #6f42c1)',
-              }}
-            >
+              }}>
               <h3 className="mb-0" style={{ fontWeight: '600' }}>
                 Registro de Cuenta
               </h3>
@@ -215,15 +212,13 @@ const FormRegister = () => {
                       border: 'none',
                       boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
                       transition: 'all 0.3s ease',
-                    }}
-                  >
+                    }}>
                     Crear Cuenta
                   </button>
                   <button
                     type="button"
                     className="btn btn-outline-light mt-2"
-                    onClick={() => navigate('/')}
-                  >
+                    onClick={() => navigate('/')}>
                     Volver al Inicio de Sesión
                   </button>
                 </div>
@@ -231,8 +226,7 @@ const FormRegister = () => {
             </div>
             <div
               className="card-footer bg-dark text-center text-muted py-3"
-              style={{ borderTop: '1px solid #333', borderRadius: '0 0 15px 15px' }}
-            >
+              style={{ borderTop: '1px solid #333', borderRadius: '0 0 15px 15px' }}>
               <small>Tus datos están protegidos con los más altos estándares de seguridad</small>
             </div>
           </div>
