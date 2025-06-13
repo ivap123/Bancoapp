@@ -1,57 +1,130 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase/config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
+import TransferForm from './TransferForm';
+import DepositForm from './DepositForm';
 
 const Dashboard = () => {
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [balance, setBalance] = useState(1250000); // Balance ficticio
-  const [transactions, setTransactions] = useState([
-    { id: 1, date: '2023-11-15', description: 'Depósito', amount: 350000, type: 'credit' },
-    { id: 2, date: '2023-11-12', description: 'Pago Servicios', amount: 45000, type: 'debit' },
-    {
-      id: 3,
-      date: '2023-11-10',
-      description: 'Transferencia recibida',
-      amount: 125000,
-      type: 'credit',
-    },
-    { id: 4, date: '2023-11-05', description: 'Compra Supermercado', amount: 85000, type: 'debit' },
-  ]);
-
   const navigate = useNavigate();
+  const [userData, setUserData] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [showDepositForm, setShowDepositForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const user = auth.currentUser;
+    const unsubscribe = auth.onAuthStateChanged(currentUser => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
-        if (!user) {
-          navigate('/');
-          return;
-        }
+  useEffect(() => {
+    if (user) {
+      fetchUserData();
+      fetchTransactions();
+    }
+  }, [user]);
 
-        const q = query(collection(db, 'usuarios'), where('uid', '==', user.uid));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          const data = querySnapshot.docs[0].data();
-          setUserData(data);
-        } else {
-          console.warn('No se encontraron datos del usuario');
-          navigate('/');
-        }
-      } catch (error) {
-        console.error('Error al obtener datos del usuario:', error);
-      } finally {
-        setLoading(false);
+  const fetchUserData = async () => {
+    try {
+      if (!user || !user.uid) {
+        console.log('Usuario no autenticado (fetchUserData)');
+        return;
       }
-    };
+      const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setUserData({
+          ...data,
+          saldo: Number(data.saldo) || 0,
+        });
+      } else {
+        console.log('No existe el documento de usuario.');
+        setUserData(null);
+      }
+    } catch (error) {
+      console.error('Error al obtener datos del usuario:', error);
+      setUserData(null);
+    }
+  };
 
-    fetchUserData();
-  }, [navigate]);
+  const fetchTransactions = async () => {
+    try {
+      if (!user || !user.uid) {
+        console.log('Usuario no autenticado (fetchTransactions)');
+        return;
+      }
+
+      // Obtener transferencias enviadas
+      const qEnviadas = query(
+        collection(db, 'transferencias'),
+        where('uid', '==', user.uid),
+        orderBy('fecha', 'desc'),
+        limit(10)
+      );
+
+      // Obtener transferencias recibidas
+      const qRecibidas = query(
+        collection(db, 'transferencias'),
+        where('destinatarioUid', '==', user.uid),
+        orderBy('fecha', 'desc'),
+        limit(10)
+      );
+
+      const [enviadasSnapshot, recibidasSnapshot] = await Promise.all([
+        getDocs(qEnviadas),
+        getDocs(qRecibidas),
+      ]);
+
+      const enviadas = enviadasSnapshot.docs.map(doc => {
+        const data = doc.data();
+        const fecha =
+          data.fecha && typeof data.fecha.toDate === 'function' ? data.fecha.toDate() : new Date();
+        return {
+          id: doc.id,
+          ...data,
+          fecha: fecha,
+          tipo: 'transferencia_saliente',
+        };
+      });
+
+      const recibidas = recibidasSnapshot.docs.map(doc => {
+        const data = doc.data();
+        const fecha =
+          data.fecha && typeof data.fecha.toDate === 'function' ? data.fecha.toDate() : new Date();
+        return {
+          id: doc.id,
+          ...data,
+          fecha: fecha,
+          tipo: 'transferencia_entrante',
+        };
+      });
+
+      // Combinar y ordenar todas las transacciones por fecha
+      const todasLasTransacciones = [...enviadas, ...recibidas].sort((a, b) => b.fecha - a.fecha);
+
+      console.log('Transacciones enviadas:', enviadas);
+      console.log('Transacciones recibidas:', recibidas);
+      console.log('Todas las transacciones combinadas:', todasLasTransacciones);
+
+      setTransactions(todasLasTransacciones);
+    } catch (error) {
+      console.error('Error al obtener transacciones:', error);
+      setTransactions([]);
+    }
+  };
+
+  const handleOperationComplete = async () => {
+    if (user) {
+      await fetchUserData();
+      await fetchTransactions();
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -66,8 +139,7 @@ const Dashboard = () => {
     return (
       <div
         className="container-fluid bg-dark d-flex justify-content-center align-items-center"
-        style={{ minHeight: '100vh' }}
-      >
+        style={{ minHeight: '100vh' }}>
         <div className="spinner-border text-light" role="status">
           <span className="visually-hidden">Cargando...</span>
         </div>
@@ -83,8 +155,7 @@ const Dashboard = () => {
         style={{
           background: 'linear-gradient(90deg, #4a1f7f, #6f42c1)',
           borderBottom: '1px solid #a17fe0',
-        }}
-      >
+        }}>
         <div className="container py-3">
           <div className="row align-items-center">
             <div className="col-6">
@@ -99,8 +170,7 @@ const Dashboard = () => {
                   type="button"
                   id="userMenu"
                   data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                >
+                  aria-expanded="false">
                   <i className="bi bi-person-circle me-1"></i>
                   {userData?.nombre || 'Usuario'}
                 </button>
@@ -157,8 +227,10 @@ const Dashboard = () => {
             <div className="card border-0 shadow-sm h-100">
               <div className="card-body p-4">
                 <h5 className="card-title text-muted mb-3">Saldo disponible</h5>
-                <h2 className="display-5 fw-bold mb-3">${balance.toLocaleString('es-CL')}</h2>
-                <p className="card-text text-muted">Cuenta Corriente ···· 4567</p>
+                <h2 className="display-5 fw-bold mb-3">
+                  ${userData?.saldo?.toLocaleString('es-CL') || '0,00'}
+                </h2>
+                <p className="card-text text-muted">Cuenta Corriente {userData?.rut}</p>
               </div>
             </div>
           </div>
@@ -168,11 +240,12 @@ const Dashboard = () => {
                 <h5 className="card-title text-muted mb-3">Acciones rápidas</h5>
                 <div className="row g-2">
                   <div className="col-6">
-                    <button className="btn btn-light border w-100 py-3 d-flex flex-column align-items-center">
+                    <button
+                      onClick={() => setShowTransferForm(true)}
+                      className="btn btn-light border w-100 py-3 d-flex flex-column align-items-center">
                       <i
                         className="bi bi-arrow-up-right-circle fs-4 mb-2"
-                        style={{ color: '#6f42c1' }}
-                      ></i>
+                        style={{ color: '#6f42c1' }}></i>
                       <span>Transferir</span>
                     </button>
                   </div>
@@ -183,7 +256,9 @@ const Dashboard = () => {
                     </button>
                   </div>
                   <div className="col-6">
-                    <button className="btn btn-light border w-100 py-3 d-flex flex-column align-items-center">
+                    <button
+                      onClick={() => setShowDepositForm(true)}
+                      className="btn btn-light border w-100 py-3 d-flex flex-column align-items-center">
                       <i className="bi bi-cash-stack fs-4 mb-2" style={{ color: '#6f42c1' }}></i>
                       <span>Depositar</span>
                     </button>
@@ -223,13 +298,30 @@ const Dashboard = () => {
                     <tbody>
                       {transactions.map(transaction => (
                         <tr key={transaction.id}>
-                          <td>{transaction.date}</td>
-                          <td>{transaction.description}</td>
+                          <td>
+                            {new Date(transaction.fecha).toLocaleDateString('es-CL', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                          <td>
+                            {transaction.tipo === 'transferencia_saliente'
+                              ? `Transferencia a ${transaction.destinatarioRut}`
+                              : transaction.tipo === 'transferencia_entrante'
+                                ? `Transferencia de ${transaction.uid}`
+                                : 'Depósito'}
+                          </td>
                           <td
-                            className={`text-end fw-bold ${transaction.type === 'credit' ? 'text-success' : 'text-danger'}`}
-                          >
-                            {transaction.type === 'credit' ? '+' : '-'} $
-                            {transaction.amount.toLocaleString('es-CL')}
+                            className={`text-end fw-bold ${
+                              transaction.tipo === 'transferencia_saliente'
+                                ? 'text-danger'
+                                : 'text-success'
+                            }`}>
+                            {transaction.tipo === 'transferencia_saliente' ? '-' : '+'} $
+                            {transaction.monto.toLocaleString('es-CL')}
                           </td>
                         </tr>
                       ))}
@@ -257,6 +349,22 @@ const Dashboard = () => {
           </div>
         </div>
       </footer>
+
+      {showTransferForm && (
+        <TransferForm
+          onClose={() => setShowTransferForm(false)}
+          onTransferComplete={handleOperationComplete}
+          currentBalance={userData?.saldo}
+        />
+      )}
+
+      {showDepositForm && (
+        <DepositForm
+          onClose={() => setShowDepositForm(false)}
+          onDepositComplete={handleOperationComplete}
+          currentBalance={userData?.saldo}
+        />
+      )}
     </div>
   );
 };
