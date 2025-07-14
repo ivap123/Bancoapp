@@ -15,11 +15,18 @@ const DepositForm = ({ onClose, onDepositComplete, currentBalance }) => {
     setError('');
 
     try {
+      // Validación lógica adicional
+      if (Number(amount) <= 0) {
+        setError('El monto debe ser mayor a 0');
+        setLoading(false);
+        return;
+      }
+
       const user = auth.currentUser;
       if (!user) throw new Error('Usuario no autenticado');
 
       // Crear el depósito
-      const depositRef = await addDoc(collection(db, 'transferencias'), {
+      await addDoc(collection(db, 'transferencias'), {
         uid: user.uid,
         monto: Number(amount),
         fecha: new Date(),
@@ -76,7 +83,8 @@ const DepositForm = ({ onClose, onDepositComplete, currentBalance }) => {
                     id="description"
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    rows="3"></textarea>
+                    rows="3"
+                  />
                 </div>
                 {error && <div className="alert alert-danger">{error}</div>}
                 <div className="d-flex justify-content-end gap-2">

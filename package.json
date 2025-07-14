@@ -12,7 +12,7 @@
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.0",
+    "react-router-dom": "^7.6.3",
     "react-scripts": "5.0.1",
     "reactstrap": "^9.2.3",
     "web-vitals": "^2.1.4"
@@ -24,7 +24,8 @@
     "eject": "react-scripts eject",
     "lint": "eslint src/**/*.{js,jsx}",
     "lint:fix": "eslint src/**/*.{js,jsx} --fix",
-    "format": "prettier --write src/**/*.{js,jsx,css,scss}"
+    "format": "prettier --write src/**/*.{js,jsx,css,scss}",
+    "test:coverage": "react-scripts test --coverage --watchAll=false"
   },
   "eslintConfig": {
     "extends": [
